@@ -36,11 +36,11 @@ from pypdf import PdfReader
 load_dotenv()
 
 # Configuration
-SEARCH_TERMS = ["Software Engineer (Python, Java)", "Data Engineer"]
+SEARCH_TERMS = ["Software Engineer (Python, Java)", "Data Engineer", "Graduate", "IT Consultant", "Tech Consultant"]
 # SEARCH_TERM = "Software Engineer (Python, Java)"
-LOCATIONS = ["Tokyo, Japan", "Hongkong"]
-RESULT_LIMIT = 15
-HOURS_OLD = 24
+LOCATIONS = ["Denmark", "Sweden", "Germany", "Ireland", "Netherlands"]
+RESULT_LIMIT = 20
+HOURS_OLD = 6
 PROXY_URL = os.getenv("PROXY_URL", None)
 RESUME = os.getenv("RESUME_TEXT", None)
 API_KEY = os.getenv("OPENAI_API_KEY")
