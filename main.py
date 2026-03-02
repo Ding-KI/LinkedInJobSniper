@@ -121,7 +121,7 @@ prompt_template = ChatPromptTemplate.from_messages([
 
 # Chain
 # evaluation_chain = prompt_template | structured_llm
-evaluation_chain = prompt_template | llm
+# evaluation_chain = prompt_template | llm
 
 
 # Read resume from Google Drive
