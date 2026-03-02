@@ -38,10 +38,10 @@ import json
 load_dotenv()
 
 # Configuration
-SEARCH_TERMS = ["Software Engineer (Python, Java)", "Data Engineer", "Graduate", "IT Consultant", "Tech Consultant"]
+SEARCH_TERMS = ["Software Engineer (Python, Java)", "Early career", "Graduate", "IT Consultant", "Tech Consultant"]
 # SEARCH_TERM = "Software Engineer (Python, Java)"
 LOCATIONS = ["Denmark", "Sweden", "Germany", "Ireland", "Netherlands"]
-RESULT_LIMIT = 20
+RESULT_LIMIT = 30
 HOURS_OLD = 6
 PROXY_URL = os.getenv("PROXY_URL", None)
 RESUME = os.getenv("RESUME_TEXT", None)
