@@ -68,7 +68,7 @@ llm = ChatOpenAI(
 
 
 # structure output
-structured_llm = llm.with_structured_output(JobEvaluation)
+# structured_llm = llm.with_structured_output(JobEvaluation)
 
 # system template
 system_template = """
@@ -83,6 +83,10 @@ The years of experience should be extracted from the job description. If not men
 
 [Criteria]
 1. Skill Match (50%): How well do the required skills and technologies in the job description align with those listed on the resume? (Programming Languages, Frameworks, Tools, etc,)
+
+[Output Format]
+You MUST respond with ONLY a valid JSON object, no extra text:
+{"score": <int 0-100>, "reason": "<one sentence>", "yoe": "<years or Not Specified>"}
 """
 
 system_template += CRITERIA
@@ -106,7 +110,8 @@ prompt_template = ChatPromptTemplate.from_messages([
 
 
 # Chain
-evaluation_chain = prompt_template | structured_llm
+# evaluation_chain = prompt_template | structured_llm
+evaluation_chain = prompt_template | llm
 
 
 # Read resume from Google Drive
@@ -247,7 +252,21 @@ def evaluate_job(title: str, description: str) -> dict:
             "title": title,
             "description": description[:3000]
         })
-        return {"score": result.score, "reason": result.reason, "yoe": result.yoe}
+        # 提取 JSON 内容
+        text = result.content.strip()
+        # 兼容模型返回 ```json ... ``` 的情况
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+            return {
+                "score": int(data.get("score", 0)),
+                "reason": data.get("reason", ""),
+                "yoe": data.get("yoe", "Not Specified")
+            }
+        else:
+            return {"score": 0, "reason": "Failed to parse AI response", "yoe": "Not Specified"}
+            
+        # return {"score": result.score, "reason": result.reason, "yoe": result.yoe}
 
     except Exception as e:
         print(f"⚠️  AI Evaluation Error for '{title}': {e}")
