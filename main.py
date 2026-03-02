@@ -30,6 +30,8 @@ from pydantic import BaseModel, Field
 # read pdf
 from pypdf import PdfReader
 
+from openai import OpenAI
+import json
 
 
 # Load environment variables
@@ -59,13 +61,19 @@ class JobEvaluation(BaseModel):
 
 
 # AI model
+'''
 llm = ChatOpenAI(
     model_name="deepseek-chat",
     temperature=0,
     api_key=API_KEY,
     base_url=BASE_URL,
 )
+'''
 
+deepseek_client = OpenAI(
+    api_key=API_KEY,
+    base_url=BASE_URL,
+)
 
 # structure output
 # structured_llm = llm.with_structured_output(JobEvaluation)
@@ -85,14 +93,15 @@ The years of experience should be extracted from the job description. If not men
 1. Skill Match (50%): How well do the required skills and technologies in the job description align with those listed on the resume? (Programming Languages, Frameworks, Tools, etc,)
 
 [Output Format]
-You MUST respond with ONLY a valid JSON object, no extra text:
-{"score": <int 0-100>, "reason": "<one sentence>", "yoe": "<years or Not Specified>"}
+You MUST respond in JSON format like this example:
+{{"score": 85, "reason": "Strong Python and data pipeline experience.", "yoe": "3+ years"}}
 """
 
 system_template += CRITERIA
 
 
 # Prompt template
+'''
 prompt_template = ChatPromptTemplate.from_messages([
     ("system",
      system_template),
@@ -107,6 +116,7 @@ prompt_template = ChatPromptTemplate.from_messages([
     Analyze the match. Be strict. If the tech stack is completely different, give a low score.
     """)
 ])
+'''
 
 
 # Chain
@@ -241,36 +251,42 @@ def get_jobs_data(location: str, search_term: str) -> pd.DataFrame:
 
 
 def evaluate_job(title: str, description: str) -> dict:
-    """Using Langchain to evaluate a job posting against the resume."""
     if not description or len(str(description)) < 50:
         return {"score": 0, "reason": "Job description too short or missing", "yoe": "Not Specified"}
 
     try:
-        # 调用 Chain
-        result: JobEvaluation = evaluation_chain.invoke({
-            "resume": RESUME[:3000],  # save token
-            "title": title,
-            "description": description[:3000]
-        })
-        # 提取 JSON 内容
-        text = result.content.strip()
-        # 兼容模型返回 ```json ... ``` 的情况
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            data = json.loads(match.group())
-            return {
-                "score": int(data.get("score", 0)),
-                "reason": data.get("reason", ""),
-                "yoe": data.get("yoe", "Not Specified")
-            }
-        else:
-            return {"score": 0, "reason": "Failed to parse AI response", "yoe": "Not Specified"}
-            
-        # return {"score": result.score, "reason": result.reason, "yoe": result.yoe}
+        user_prompt = f"""
+RESUME (Truncated):
+{RESUME[:3000]}
+
+JOB TITLE: {title}
+JOB DESCRIPTION (Truncated):
+{description[:3000]}
+
+Analyze the match. Be strict. If the tech stack is completely different, give a low score.
+"""
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_template},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0,
+        )
+
+        data = json.loads(response.choices[0].message.content)
+        return {
+            "score": int(data.get("score", 0)),
+            "reason": data.get("reason", ""),
+            "yoe": data.get("yoe", "Not Specified")
+        }
 
     except Exception as e:
         print(f"⚠️  AI Evaluation Error for '{title}': {e}")
         return {"score": 0, "reason": "AI Error", "yoe": "AI Error"}
+
 
 def send_email(top_jobs: List[dict]):
     if not top_jobs:
